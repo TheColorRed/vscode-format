@@ -1,13 +1,80 @@
-# README
-## This is the README for your extension "vscode-format" 
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
+Visual Studio Code Format will allow you to format most of your code documents.
 
-* Split the editor (`Cmd+\` on OSX or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on OSX or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (OSX) to see a list of Markdown snippets
+The formatting is triggered by running your format command: `editor.action.format`
 
-### For more information
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+<hr>
 
-** Enjoy!**
+Place your braces on the same line or the next line:
+
+```json
+{
+    "newLine": {
+        "brace": true
+    }
+}
+```
+
+Based on your settings you will see this as a result:
+
+```
+if(a == b){
+    // My Code
+}
+```
+Or you will see this as a result:
+```
+if(a == b)
+{
+    // My Code
+}
+```
+
+<hr>
+
+Place 0 or more spaces before or after a parenthesis/brace/comma for each type of keyword.
+
+Here are just a few of the different settings:
+
+```json
+{
+    "space":{
+        "comma":{
+            "before": 0,
+            "after": 1
+        },
+        "parenthesis":{
+            "open":{
+                "before":{
+                    "foreach": 1,
+                    "if": 1
+                }
+            }
+        },
+        "brace":{
+            "open":{
+                "before":{
+                    "for": 1,
+                    "if": 1
+                }
+            }
+        }
+    }
+}
+```
+
+Add your own space formats for a particular language:
+
+```json
+{
+    "space": {
+        "language": {
+            "php": {
+                ".": {
+                    "before": 1,
+                    "after": 1
+                }
+            }
+        }
+    }
+}
+```
