@@ -93,13 +93,20 @@ class DocumentFormat implements DocumentFormattingEditProvider {
 					}
 					this.depth++;
 					if (!braceNewLine) {
+						let c = 0;
 						for (let j in braceSpaceOpenBefore) {
 							if (lastKeyword == j) {
 								s = s.trim();
 								s += this.spacePlaceholder(braceSpaceOpenBefore[j]);
 								s = s.trim();
+								c++;
 								break;
 							}
+						}
+						if (c == 0) {
+							s = s.trim();
+							s += this.spacePlaceholder(braceSpaceOpenBefore.other);
+							s = s.trim();
 						}
 					} else {
 						if (this.lineAtIndex(s, i).trim() != '') {
@@ -168,7 +175,7 @@ class DocumentFormat implements DocumentFormattingEditProvider {
 					s = s.trim();
 					break;
 				default:
-					if (char in spaceOther) {
+					if (spaceOther && char in spaceOther) {
 						if (inString || inComment) {
 							s += char;
 							break;
