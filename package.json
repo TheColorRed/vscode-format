@@ -1,16 +1,16 @@
 {
-	"name": "vscode-format",
-	"displayName": "Visual Studio Code Format",
-	"description": "Format files",
+    "name": "vscode-format",
+    "displayName": "Visual Studio Code Format",
+    "description": "Format files",
     "icon": "images/icon.png",
-	"version": "0.0.1",
-	"publisher": "ryannaddy",
-	"engines": {
-		"vscode": "^0.10.1"
-	},
-	"activationEvents": [
-		"*"
-	],
+    "version": "0.0.2",
+    "publisher": "ryannaddy",
+    "engines": {
+        "vscode": "^0.10.1"
+    },
+    "activationEvents": [
+        "*"
+    ],
     "categories": [
         "Languages",
         "Other"
@@ -19,116 +19,166 @@
         "languages",
         "format"
     ],
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/TheColorRed/vscode-format"
-	},
-	"main": "./out/src/extension",
-	"contributes": {
-		"configuration": {
-			"properties": {
-				"format.newLine": {
-					"type": "object",
-					"default": {
-						"brace": false
-					}
-				},
-				"format.space": {
-					"type": "object",
-					"default": {
-						"language": {
-							"php": {
-								".": {
-									"before": 1,
-									"after": 1
-								}
-							},
-							"javascript": {
-								"+": {
-									"before": 1,
-									"after": 1
-								}
-							},
-							"java": {
-								"+": {
-									"before": 1,
-									"after": 1
-								}
-							}
-						},
-						"comma": {
-							"before": 0,
-							"after": 1
-						},
-						"parenthesis": {
-							"open": {
-								"before": {
-									"other": 1,
-									"foreach": 1,
-									"for": 1,
-									"while": 1,
-									"if": 1,
-									"elseif": 1,
-									"elif": 1,
-									"switch": 1,
-									"do": 1,
-									"function": 1
-								},
-								"after": {
-									"other": 1,
-									"foreach": 0,
-									"for": 0,
-									"while": 0,
-									"if": 0,
-									"elseif": 0,
-									"elif": 0,
-									"switch": 0,
-									"do": 0,
-									"function": 0
-								}
-							},
-							"close": {
-								"before": {
-									"other": 1,
-									"foreach": 0,
-									"for": 0,
-									"while": 0,
-									"if": 0,
-									"elseif": 0,
-									"elif": 0,
-									"switch": 0,
-									"do": 0,
-									"function": 0
-								}
-							}
-						},
-						"brace": {
-							"open": {
-								"before": {
-									"other": 1,
-									"foreach": 1,
-									"for": 1,
-									"while": 1,
-									"if": 1,
-									"elseif": 1,
-									"elif": 1,
-									"switch": 1,
-									"do": 1,
-									"function": 1
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	},
-	"scripts": {
-		"vscode:prepublish": "node ./node_modules/vscode/bin/compile",
-		"compile": "node ./node_modules/vscode/bin/compile -watch -p ./"
-	},
-	"devDependencies": {
-		"typescript": "^1.6.2",
-		"vscode": "0.10.x"
-	}
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TheColorRed/vscode-format"
+    },
+    "main": "./out/src/extension",
+    "contributes": {
+        "configuration": {
+            "properties": {
+                "format.newLine": {
+                    "type": "object",
+                    "default": {
+                        "brace": false
+                    },
+                    "description": "Whether or not to put items on a new line or the same line."
+                },
+                "format.disabled": {
+                    "type": "array",
+                    "default": ["html"],
+                    "description": "A list of of languages that the formatter is disabled."
+                },
+                "format.onType": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enables or disables formatting while typing."
+                },
+                "format.space": {
+                    "type": "object",
+                    "description": "The number of spaces to place before/after particular character.",
+                    "default": {
+                        "language": {
+                            "php": {
+                                ".": {
+                                    "before": 1,
+                                    "after": 1
+                                }
+                            },
+                            "javascript": {
+                                "+": {
+                                    "before": 1,
+                                    "after": 1
+                                }
+                            },
+                            "java": {
+                                "+": {
+                                    "before": 1,
+                                    "after": 1
+                                }
+                            },
+                            "css": {
+                                ":": {
+                                    "before": 0,
+                                    "after": 1
+                                },
+                                "=": {
+                                    "before": 0,
+                                    "after": 0
+                                }
+                            }
+                        },
+                        "equal": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "not": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "greaterThan": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "lessThan": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "comma": {
+                            "before": 0,
+                            "after": 1
+                        },
+                        "question": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "colon": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "semicolon": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "parenthesis": {
+                            "open": {
+                                "before": {
+                                    "other": 1,
+                                    "foreach": 1,
+                                    "for": 1,
+                                    "while": 1,
+                                    "if": 1,
+                                    "elseif": 1,
+                                    "elif": 1,
+                                    "switch": 1,
+                                    "do": 1,
+                                    "function": 1
+                                },
+                                "after": {
+                                    "other": 1,
+                                    "foreach": 0,
+                                    "for": 0,
+                                    "while": 0,
+                                    "if": 0,
+                                    "elseif": 0,
+                                    "elif": 0,
+                                    "switch": 0,
+                                    "do": 0,
+                                    "function": 0
+                                }
+                            },
+                            "close": {
+                                "before": {
+                                    "other": 1,
+                                    "foreach": 0,
+                                    "for": 0,
+                                    "while": 0,
+                                    "if": 0,
+                                    "elseif": 0,
+                                    "elif": 0,
+                                    "switch": 0,
+                                    "do": 0,
+                                    "function": 0
+                                }
+                            }
+                        },
+                        "brace": {
+                            "open": {
+                                "before": {
+                                    "other": 1,
+                                    "foreach": 1,
+                                    "for": 1,
+                                    "while": 1,
+                                    "if": 1,
+                                    "elseif": 1,
+                                    "elif": 1,
+                                    "switch": 1,
+                                    "do": 1,
+                                    "function": 1
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "node ./node_modules/vscode/bin/compile",
+        "compile": "node ./node_modules/vscode/bin/compile -watch -p ./"
+    },
+    "devDependencies": {
+        "typescript": "^1.6.2",
+        "vscode": "0.10.x"
+    }
 }

@@ -1,280 +1,76 @@
 import {
-	window, workspace, DocumentFormattingEditProvider, WorkspaceConfiguration,
+	workspace, DocumentFormattingEditProvider, Selection,
+	OnTypeFormattingEditProvider, WorkspaceConfiguration,
 	languages, ExtensionContext, TextEdit, Position, DocumentFilter,
-	TextDocument, FormattingOptions, CancellationToken, Range, DocumentSelector
+	TextDocument, FormattingOptions, CancellationToken, Range,
+	TextEditor
 } from 'vscode';
 
+import { Format } from './format';
 
-class DocumentFormat implements DocumentFormattingEditProvider {
+// Get global configuration settings
+var config: WorkspaceConfiguration = workspace.getConfiguration('format');
+var onType: boolean = config.get<boolean>('onType', true);
+var disabled: Array<string> = config.get<Array<string>>('disabled', ['html']);
 
-	private spacePlaceholderStr = '__VSCODE__SPACE__PLACEHOLDER__';
+// Update the configuration if it changes
+workspace.onDidChangeConfiguration(e => {
+	config = workspace.getConfiguration('format');
+	onType = config.get<boolean>('onType', true);
+	disabled = config.get<Array<string>>('disabled', ['html']);
+});
 
-	private depth = 0;
+// Format the code on type
+class DocumentTypeFormat implements OnTypeFormattingEditProvider {
 
-	public provideDocumentFormattingEdits(document: TextDocument, options: FormattingOptions, token: CancellationToken): Thenable<TextEdit[]> {
-		return this.format(document, null, options);
-	}
-
-	private format(document: TextDocument, range: Range, options): Thenable<TextEdit[]> {
-		return new Promise(resolve => {
-			let result: TextEdit[] = [];
-
-			if (range === null) {
-				var start = new Position(0, 0);
-				var end = new Position(document.lineCount - 1, document.lineAt(document.lineCount - 1).text.length);
-				range = new Range(start, end);
-			}
-
-			var source = document.getText();
-
-			var newText: string = this.formatMe(source, document.languageId);
-
-			result.push(new TextEdit(range, newText));
-
-			return resolve(result);
-		});
-
-	}
-
-	private formatMe(source: string, languageId: string): string {
-		var config: WorkspaceConfiguration = workspace.getConfiguration('format');
-
-		// Config base
-		var space = config.get<any>('space');
-		var newLine = config.get<any>('newLine');
-
-		var spaceOther = space.language[languageId];
-
-		var braceSpaceOpenBefore = space.brace.open.before;
-		var braceNewLine = newLine.brace;
-
-		var parenSpaceOpenBefore = space.parenthesis.open.before;
-		var parenSpaceOpenAfter = space.parenthesis.open.after;
-		var parenSpaceCloseBefore = space.parenthesis.close.before;
-
-
-		// Comma configs
-		var commaSpaceAfter = config.get<number>('space.comma.after', 1);
-
-		var s: string = '';
-
-		var ignoreSpace = false;
-		var lastKeyword = '';
-
-		var inString: boolean = false;
-		var inComment: boolean = false;
-
-		var stringChar = null;
-
-		for (var i = 0; i < source.length; i++) {
-			var char: string = source[i];
-			var words: string[] = this.cleanArray(s.split(/[\s\(\)\[\];|'"]/));
-			var last = words[words.length - 1];
-			if ((inString || inComment) && char != '\'' && char != '"') {
-				s += char;
-				continue;
-			}
-			switch (char) {
-				case '"':
-				case '\'':
-					if (stringChar == char && inString) {
-						inString = false;
-						stringChar = null;
-					} else if(stringChar === null && !inString) {
-						inString = true;
-						stringChar = char;
-					}
-					s += char;
-					break;
-				case '{':
-					if (inString || inComment) {
-						s += char;
-						break;
-					}
-					this.depth++;
-					if (!braceNewLine) {
-						let c = 0;
-						for (let j in braceSpaceOpenBefore) {
-							if (lastKeyword == j) {
-								s = s.trim();
-								s += this.spacePlaceholder(braceSpaceOpenBefore[j]);
-								s = s.trim();
-								c++;
-								break;
-							}
-						}
-						if (c == 0) {
-							s = s.trim();
-							s += this.spacePlaceholder(braceSpaceOpenBefore.other);
-							s = s.trim();
-						}
-					} else {
-						if (this.lineAtIndex(s, i).trim() != '') {
-							s += '\n' + this.indent(this.depth - 1);
-						}
-					}
-					s += char;
-					break;
-				case '}':
-					if (inString || inComment) {
-						s += char;
-						break;
-					}
-					this.depth--;
-					s += char;
-					break;
-				case '(':
-					if (inString) {
-						s += char;
-						break;
-					}
-					ignoreSpace = true;
-					for (let j in parenSpaceOpenBefore) {
-						if (last == j) {
-							s = s.trim();
-							s += this.spacePlaceholder(parenSpaceOpenBefore[j]);
-							s = s.trim();
-							lastKeyword = last;
-							break;
-						}
-					}
-					s += char;
-					for (let j in parenSpaceOpenAfter) {
-						if (last == j) {
-							s = s.trim();
-							s += this.spacePlaceholder(parenSpaceOpenAfter[j]);
-							s = s.trim();
-							break;
-						}
-					}
-					break;
-				case ')':
-					if (inString || inComment) {
-						s += char;
-						break;
-					}
-					for (let j in parenSpaceCloseBefore) {
-						if (lastKeyword == j) {
-							s = s.trim();
-							s += this.spacePlaceholder(parenSpaceCloseBefore[j]);
-							s = s.trim();
-							break;
-						}
-					}
-					s += char;
-					break;
-				case ',':
-					if (inString || inComment) {
-						s += char;
-						break;
-					}
-					ignoreSpace = true;
-					s = s.trim();
-					s += char;
-					s += this.spacePlaceholderStr.repeat(commaSpaceAfter);
-					s = s.trim();
-					break;
-				default:
-					if (spaceOther && char in spaceOther) {
-						if (inString || inComment) {
-							s += char;
-							break;
-						}
-						ignoreSpace = true;
-						s = s.trim();
-						s += this.spacePlaceholder((spaceOther[char].before || 0));
-						s = s.trim();
-						s += char;
-						s = s.trim();
-						s += this.spacePlaceholder((spaceOther[char].after || 0));
-						s = s.trim();
-					} else {
-						if (inString || inComment) {
-							s += char;
-							break;
-						}
-						if (ignoreSpace && char == ' ') {
-							// Skip
-						} else {
-							s += char;
-							ignoreSpace = false;
-						}
-					}
-					break;
-			}
-		}
-
-		// if (braceSameline) {
-		// 	s = s.replace(/\s*\{/g, this.spacePlaceholderStr.repeat(braceSpaceBefore) + '{');
-		// }
-		// s = s.replace(/,\s*/g, ',' + this.spacePlaceholderStr.repeat(commaSpaceAfter));
-
-		s = s.replace(new RegExp(this.spacePlaceholderStr, 'g'), ' ');
-
-		// if (!braceSameline) {
-		// 	var lines = s.split(/\n/);
-		// 	var i = 0;
-		// 	lines.forEach(line => {
-		// 		line = lines[i].trim();
-		// 		if (line.match(/\{$/)) {
-		// 			lines[i] = line.replace(/\{$/, '\n{');
-		// 		}
-		// 		i++;
-		// 	});
-		// 	s = lines.join('\n');
-		// }
-
-		return s;
-	}
-
-	protected cleanArray(arr: string[]): string[] {
-		for (var i = 0; i < arr.length; i++) {
-			if (arr[i] == '') {
-				arr.splice(i, 1);
-				i--;
-			}
-		}
-		return arr;
-	}
-
-	protected spacePlaceholder(length: number): string {
-		return this.spacePlaceholderStr.repeat(length);
-	}
-
-	protected lineAtIndex(str: string, idx: number): string {
-
-		// return str.substring(str.substr(0, idx).lastIndexOf("\n") + 1, idx + str.substr(idx).indexOf("\n"));
-
-		var first = str.substring(0, idx);
-		var last = str.substring(idx);
-
-		var firstNewLine = first.lastIndexOf("\n");
-
-		var secondNewLine = last.indexOf("\n");
-
-		if (secondNewLine == -1) {
-			secondNewLine = last.length;
-		}
-
-		return str.substring(firstNewLine + 1, idx + secondNewLine);
-	}
-
-	protected indent(amount: number) {
-		amount = amount < 0 ? 0 : amount;
-		return this.spacePlaceholderStr.repeat(amount * 4);
-		// var s = '';
-		// for (var j = 0; j < this.depth; j++) s += ' ';
-		// return s;
+	public provideOnTypeFormattingEdits(document: TextDocument, position: Position, ch: string, options: FormattingOptions, token: CancellationToken): Thenable<TextEdit[]> {
+		// Don't format if onType is disabled
+		if (!onType) { return; }
+		// Don't format if the language is in the disabled list
+		if (disabled.indexOf(document.languageId) > -1) { return; }
+		// Format the document
+		return format(document, null, options);
 	}
 }
 
+// Format the code when the format keybindings are pressed
+class DocumentFormat implements DocumentFormattingEditProvider {
+	public provideDocumentFormattingEdits(document: TextDocument, options: FormattingOptions, token: CancellationToken): Thenable<TextEdit[]> {
+		// Don't format if the language is in the disabled list
+		if (disabled.indexOf(document.languageId) > -1) { return; }
+		// Format the document
+		return format(document, null, options);
+	}
+}
 
+// Execute the format edits
+function format(document: TextDocument, range: Range, options: FormattingOptions): Thenable<TextEdit[]> {
+	return new Promise(resolve => {
+		// Create an empty list of changes
+		let result: TextEdit[] = [];
+		// Create a full document range
+		if (range === null) {
+			var start = new Position(0, 0);
+			var end = new Position(document.lineCount - 1, document.lineAt(document.lineCount - 1).text.length);
+			range = new Range(start, end);
+		}
+		// Format the document with the user specified settings
+		var newText: string = Format.document(document.getText(), options, document.languageId);
+		// Push the edit into the result array
+		result.push(new TextEdit(range, newText));
+		// Return the result of the change
+		return resolve(result);
+	});
+}
 
-
+// When the extention gets activated
 export function activate(context: ExtensionContext) {
 
+	// Set the document filter to files
 	let docFilter: DocumentFilter = { scheme: 'file' };
+	// Register the format provider
 	context.subscriptions.push(languages.registerDocumentFormattingEditProvider(docFilter, new DocumentFormat()));
-	// languages.registerOnTypeFormattingEditProvider(docFilter, new DocumentFormat());
+	// Register the onType format provider
+	context.subscriptions.push(languages.registerOnTypeFormattingEditProvider(docFilter, new DocumentTypeFormat(), '\n', '\r\n', ';'));
 
 }
