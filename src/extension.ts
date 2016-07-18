@@ -3,7 +3,7 @@ import {
 	OnTypeFormattingEditProvider, WorkspaceConfiguration,
 	languages, ExtensionContext, TextEdit, Position, DocumentFilter,
 	TextDocument, FormattingOptions, CancellationToken, Range,
-	TextEditor
+	TextEditor, commands
 } from 'vscode';
 
 import { Format } from './format';
@@ -11,23 +11,28 @@ import { Format } from './format';
 // Get global configuration settings
 var config: WorkspaceConfiguration = workspace.getConfiguration('format');
 var onType: boolean = config.get<boolean>('onType', true);
-var disabled: Array<string> = config.get<Array<string>>('disabled', ['html']);
+var disabled: Array<string> = config.get<Array<string>>('disabled');
+var workspaceDisabled: boolean = config.get<boolean>('workspaceDisabled', false);
 
-// Update the configuration if it changes
+// Update the configuration settings if the configuration changes
 workspace.onDidChangeConfiguration(e => {
 	config = workspace.getConfiguration('format');
 	onType = config.get<boolean>('onType', true);
-	disabled = config.get<Array<string>>('disabled', ['html']);
+	disabled = config.get<Array<string>>('disabled');
+	workspaceDisabled = config.get<boolean>('workspaceDisabled', false);
 });
+
+workspace.onDidOpenTextDocument(document => {
+	console.log(`Document Id: ${document.languageId}`);
+})
 
 // Format the code on type
 class DocumentTypeFormat implements OnTypeFormattingEditProvider {
-
 	public provideOnTypeFormattingEdits(document: TextDocument, position: Position, ch: string, options: FormattingOptions, token: CancellationToken): Thenable<TextEdit[]> {
 		// Don't format if onType is disabled
 		if (!onType) { return; }
 		// Don't format if the language is in the disabled list
-		if (disabled.indexOf(document.languageId) > -1) { return; }
+		if (disabled.indexOf(document.languageId) > -1 || workspaceDisabled) { return; }
 		// Format the document
 		return format(document, null, options);
 	}
@@ -37,7 +42,7 @@ class DocumentTypeFormat implements OnTypeFormattingEditProvider {
 class DocumentFormat implements DocumentFormattingEditProvider {
 	public provideDocumentFormattingEdits(document: TextDocument, options: FormattingOptions, token: CancellationToken): Thenable<TextEdit[]> {
 		// Don't format if the language is in the disabled list
-		if (disabled.indexOf(document.languageId) > -1) { return; }
+		if (disabled.indexOf(document.languageId) > -1 || workspaceDisabled) { return; }
 		// Format the document
 		return format(document, null, options);
 	}
@@ -65,7 +70,7 @@ function format(document: TextDocument, range: Range, options: FormattingOptions
 
 // When the extention gets activated
 export function activate(context: ExtensionContext) {
-
+	console.log('Activating vscode-format');
 	// Set the document filter to files
 	let docFilter: DocumentFilter = { scheme: 'file' };
 	// Register the format provider
@@ -73,4 +78,7 @@ export function activate(context: ExtensionContext) {
 	// Register the onType format provider
 	context.subscriptions.push(languages.registerOnTypeFormattingEditProvider(docFilter, new DocumentTypeFormat(), '\n', '\r\n', ';'));
 
+	// context.subscriptions.push(commands.registerCommand('format.workspace', function () {
+	// 	workspace.findFiles('**/*.*', '').then();
+	// }));
 }

@@ -78,3 +78,13 @@ Add your own space formats for a particular language:
     }
 }
 ```
+
+If you would like to disable a particular language add the language id to the `disabled` array.
+
+Here is the current list of disabled languages:
+
+```json
+["html", "markdown", "plaintext", "diff", "jade", "xml", "blade", "handlebars", "tpl"]
+```
+
+If you would like to disable formatting in the entire workspace, set `workspaceDisabled` to `true`.

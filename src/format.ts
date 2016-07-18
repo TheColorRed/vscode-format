@@ -14,6 +14,9 @@ export class Format {
     protected static next: string = '';
     protected static space;
     protected static newLine;
+    protected static char;
+    protected static last;
+    protected static words: string[];
 
     public static document(source: string, formattingOptions: FormattingOptions, languageId: string): string {
         var config: WorkspaceConfiguration = workspace.getConfiguration('format');
@@ -37,29 +40,6 @@ export class Format {
         var parenSpaceOpenAfter = space.parenthesis.open.after;
         var parenSpaceCloseBefore = space.parenthesis.close.before;
 
-
-        // Comma configs
-        var commaSpaceBefore = config.get<number>('space.comma.before', 1);
-        var commaSpaceAfter = config.get<number>('space.comma.after', 1);
-        // Greater than
-        var gtSpaceAfter = config.get<number>('space.greaterThan.after', 1);
-        var gtSpaceBefore = config.get<number>('space.greaterThan.before', 1);
-        // Less than
-        var ltSpaceAfter = config.get<number>('space.lessThan.after', 1);
-        var ltSpaceBefore = config.get<number>('space.lessThan.before', 1);
-        // Equal sign
-        var equalSpaceAfter = config.get<number>('space.equal.after', 1);
-        var equalSpaceBefore = config.get<number>('space.equal.before', 1);
-        // Not sign
-        var notSpaceAfter = config.get<number>('space.not.after', 1);
-        var notSpaceBefore = config.get<number>('space.not.before', 1);
-        // Question sign
-        var questionSpaceAfter = config.get<number>('space.question.after', 1);
-        var questionSpaceBefore = config.get<number>('space.question.before', 1);
-        // Colon sign
-        var colonSpaceAfter = config.get<number>('space.colon.after', 1);
-        var colonSpaceBefore = config.get<number>('space.colon.before', 1);
-
         var s: string = '';
 
         var ignoreSpace = false;
@@ -67,37 +47,58 @@ export class Format {
 
         var inString: boolean = false;
         var inComment: boolean = false;
+        var commentType: CommentType = null;
 
         var stringChar = null;
 
         for (var i = 0; i < source.length; i++) {
             this.offset = i;
-            var char: string = source[i];
-            var next: string = source[i + 1];
-            var prev: string = source[i - 1];
-            this.next = next;
-            this.prev = prev;
-            var words: string[] = this.cleanArray(s.split(/[\s\(\)\[\];|'"]/));
-            var last = words[words.length - 1];
-            if ((inString || inComment) && char != '\'' && char != '"') {
-                s += char;
-                continue;
-            }
-            switch (char) {
+            this.char = source[i];
+            this.next = source[i + 1];
+            this.prev = source[i - 1];
+            this.words = this.cleanArray(s.split(/[\s\(\)\[\];|'"\{\}]/));
+            this.last = this.words[this.words.length - 1];
+
+            var spaces = this.getSpaces(this.char);
+
+            switch (this.char) {
+                case '/':
+                    // If we are not in a comment
+                    if (!inComment && this.next == '/' || this.prev == '/') {
+                        inComment = true;
+                        commentType = CommentType.SingleLine;
+                    } else if (!inComment && this.next == '*') {
+                        inComment = true;
+                        commentType = CommentType.MultiLine;
+                    }
+                    // If we are in a comment and it is multiline
+                    else if (inComment && commentType == CommentType.MultiLine) {
+                        inComment = false;
+                        commentType = null;
+                    }
+                    s += this.char;
+                    break;
+                case '\n':
+                    if (inComment && commentType == CommentType.SingleLine) {
+                        inComment = false;
+                        commentType = null;
+                    }
+                    s += this.char;
+                    break;
                 case '"':
                 case '\'':
-                    if (stringChar == char && inString) {
+                    if (stringChar == this.char && inString) {
                         inString = false;
                         stringChar = null;
                     } else if (stringChar === null && !inString) {
                         inString = true;
-                        stringChar = char;
+                        stringChar = this.char;
                     }
-                    s += char;
+                    s += this.char;
                     break;
                 case '{':
                     if (inString || inComment) {
-                        s += char;
+                        s += this.char;
                         break;
                     }
                     this.depth++;
@@ -124,35 +125,35 @@ export class Format {
                             s += '\n' + this.indent(this.depth - 1);
                         }
                     }
-                    s += char;
+                    s += this.char;
                     break;
                 case '}':
                     if (inString || inComment) {
-                        s += char;
+                        s += this.char;
                         break;
                     }
                     ignoreSpace = true;
                     this.depth--;
-                    s += char;
+                    s += this.char;
                     break;
                 case '(':
-                    if (inString) {
-                        s += char;
+                    if (inString || inComment) {
+                        s += this.char;
                         break;
                     }
                     ignoreSpace = true;
                     for (let j in parenSpaceOpenBefore) {
-                        if (last == j) {
+                        if (this.last == j) {
                             s = s.trim();
                             s += this.spacePlaceholder(parenSpaceOpenBefore[j]);
                             s = s.trim();
-                            lastKeyword = last;
+                            lastKeyword = this.last;
                             break;
                         }
                     }
-                    s += char;
+                    s += this.char;
                     for (let j in parenSpaceOpenAfter) {
-                        if (last == j) {
+                        if (this.last == j) {
                             s = s.trim();
                             s += this.spacePlaceholder(parenSpaceOpenAfter[j]);
                             s = s.trim();
@@ -162,7 +163,7 @@ export class Format {
                     break;
                 case ')':
                     if (inString || inComment) {
-                        s += char;
+                        s += this.char;
                         break;
                     }
                     ignoreSpace = true;
@@ -174,81 +175,54 @@ export class Format {
                             break;
                         }
                     }
-                    s += char;
+                    s += this.char;
                     break;
                 case ',':
+                case ':':
+                case ';':
                     if (inString || inComment) {
-                        s += char;
+                        s += this.char;
                         break;
                     }
                     ignoreSpace = true;
-                    s = this.formatItem(char, s, commaSpaceBefore, commaSpaceAfter);
+                    s = this.formatItem(this.char, s, spaces);
                     break;
                 case '?':
-                    if (inString || inComment) {
-                        s += char;
-                        break;
-                    }
-                    ignoreSpace = true;
-                    s = this.formatOperator(char, s, questionSpaceBefore, questionSpaceAfter);
-                    break;
-                case ':':
-                    if (inString || inComment) {
-                        s += char;
-                        break;
-                    }
-                    ignoreSpace = true;
-                    s = this.formatItem(char, s, colonSpaceBefore, colonSpaceAfter);
-                    break;
                 case '>':
-                    if (inString || inComment) {
-                        s += char;
-                        break;
-                    }
-                    ignoreSpace = true;
-                    s = this.formatOperator(char, s, gtSpaceBefore, gtSpaceAfter);
-                    break;
                 case '<':
-                    if (inString || inComment) {
-                        s += char;
-                        break;
-                    }
-                    ignoreSpace = true;
-                    s = this.formatOperator(char, s, ltSpaceBefore, ltSpaceAfter);
-                    break;
                 case '=':
-                    if (inString || inComment) {
-                        s += char;
-                        break;
-                    }
-                    ignoreSpace = true;
-                    s = this.formatOperator(char, s, equalSpaceBefore, equalSpaceAfter);
-                    break;
                 case '!':
+                case '&':
+                case '|':
+                case '+':
+                case '-':
+                case '*':
+                case '/':
+                case '%':
                     if (inString || inComment) {
-                        s += char;
+                        s += this.char;
                         break;
                     }
                     ignoreSpace = true;
-                    s = this.formatOperator(char, s, notSpaceBefore, notSpaceAfter);
+                    s = this.formatOperator(this.char, s, spaces);
                     break;
                 default:
-                    if (spaceOther && char in spaceOther) {
+                    if (spaceOther && this.char in spaceOther) {
                         if (inString || inComment) {
-                            s += char;
+                            s += this.char;
                             break;
                         }
                         ignoreSpace = true;
-                        s = this.formatItem(char, s, (spaceOther[char].before || 0), (spaceOther[char].after || 0));
+                        s = this.formatItem(this.char, s, new Spaces((spaceOther[this.char].before || 0), (spaceOther[this.char].after || 0)));
                     } else {
                         if (inString || inComment) {
-                            s += char;
+                            s += this.char;
                             break;
                         }
-                        if (ignoreSpace && char == ' ') {
+                        if (ignoreSpace && this.char == ' ') {
                             // Skip
                         } else {
-                            s += char;
+                            s += this.char;
                             ignoreSpace = false;
                         }
                     }
@@ -256,65 +230,123 @@ export class Format {
             }
         }
 
-        // if (braceSameline) {
-        // 	s = s.replace(/\s*\{/g, spacePlaceholderStr.repeat(braceSpaceBefore) + '{');
-        // }
-        // s = s.replace(/,\s*/g, ',' + spacePlaceholderStr.repeat(commaSpaceAfter));
-
         s = s.replace(new RegExp(Format.spacePlaceholderStr, 'g'), ' ');
-
-        // if (!braceSameline) {
-        // 	var lines = s.split(/\n/);
-        // 	var i = 0;
-        // 	lines.forEach(line => {
-        // 		line = lines[i].trim();
-        // 		if (line.match(/\{$/)) {
-        // 			lines[i] = line.replace(/\{$/, '\n{');
-        // 		}
-        // 		i++;
-        // 	});
-        // 	s = lines.join('\n');
-        // }
 
         return s;
     }
 
-    protected static languageOverride(char: string): { before: number, after: number } {
-        if (this.space.language[this.langId][char]) {
+    protected static languageOverride(char: string): Spaces {
+        if (this.space.language[this.langId] && this.space.language[this.langId][char]) {
             return this.space.language[this.langId][char]
         }
         return null;
     }
 
-    protected static formatItem(char: string, s: string, spaceBefore: number, spaceAfter: number): string {
+    protected static getSpaces(char: string): Spaces {
+        var spaces: Spaces = new Spaces();
+        var config: WorkspaceConfiguration = workspace.getConfiguration('format');
+        switch (char) {
+            case '&':
+                spaces.before = config.get<number>('space.and.before', 1);
+                spaces.after = config.get<number>('space.and.after', 1);
+                break;
+            case '|':
+                spaces.before = config.get<number>('space.or.before', 1);
+                spaces.after = config.get<number>('space.or.after', 1);
+                break;
+            case ',':
+                spaces.before = config.get<number>('space.comma.before', 1);
+                spaces.after = config.get<number>('space.comma.after', 1);
+                break;
+            case '>':
+                spaces.before = config.get<number>('space.greaterThan.before', 1);
+                spaces.after = config.get<number>('space.greaterThan.after', 1);
+                break;
+            case '<':
+                spaces.before = config.get<number>('space.lessThan.before', 1);
+                spaces.after = config.get<number>('space.lessThan.after', 1);
+                break;
+            case '=':
+                spaces.before = config.get<number>('space.equal.before', 1);
+                spaces.after = config.get<number>('space.equal.after', 1);
+                break;
+            case '!':
+                spaces.before = config.get<number>('space.not.before', 1);
+                spaces.after = config.get<number>('space.not.after', 1);
+                break;
+            case '=':
+                spaces.before = config.get<number>('space.question.before', 1);
+                spaces.after = config.get<number>('space.question.after', 1);
+                break;
+            case '=':
+                spaces.before = config.get<number>('space.colon.before', 1);
+                spaces.after = config.get<number>('space.colon.after', 1);
+                break;
+            case '-':
+                if (this.next == '-' || this.prev == '-' || this.next.match(/\d/)) {
+                    spaces.before = config.get<number>('space.increment.before', 0);
+                    spaces.after = config.get<number>('space.increment.after', 0);
+                } else {
+                    spaces.before = config.get<number>('space.subtract.before', 1);
+                    spaces.after = config.get<number>('space.subtract.after', 1);
+                }
+                break;
+            case '+':
+                if (this.next == '+' || this.prev == '+') {
+                    spaces.before = config.get<number>('space.decrement.before', 0);
+                    spaces.after = config.get<number>('space.decrement.after', 0);
+                } else {
+                    spaces.before = config.get<number>('space.add.before', 1);
+                    spaces.after = config.get<number>('space.add.after', 1);
+                }
+                break;
+            case ';':
+                spaces.before = config.get<number>('space.semicolon.before', 1);
+                spaces.after = config.get<number>('space.semicolon.after', 1);
+                break;
+            case '*':
+                spaces.before = config.get<number>('space.multiply.before', 1);
+                spaces.after = config.get<number>('space.multiply.after', 1);
+                break;
+            case '/':
+                spaces.before = config.get<number>('space.divide.before', 1);
+                spaces.after = config.get<number>('space.divide.after', 1);
+                break;
+            case '%':
+                spaces.before = config.get<number>('space.modulo.before', 1);
+                spaces.after = config.get<number>('space.modulo.after', 1);
+                break;
+        }
+        return spaces;
+    }
+
+    protected static formatItem(char: string, s: string, spaces: Spaces): string {
         var override = this.languageOverride(char);
         if (override) {
-            spaceBefore = override.before;
-            spaceAfter = override.after;
+            spaces = override;
         }
         s = s.trim();
-        s += Format.spacePlaceholderStr.repeat(spaceBefore);
+        s += Format.spacePlaceholderStr.repeat(spaces.before);
         s += char;
-        s += Format.spacePlaceholderStr.repeat(spaceAfter);
+        s += Format.spacePlaceholderStr.repeat(spaces.after);
         return s.trim();
     }
 
-    protected static formatOperator(char: string, s: string, spaceBefore: number, spaceAfter: number): string {
+    protected static formatOperator(char: string, s: string, spaces: Spaces): string {
         var override = this.languageOverride(char);
         if (override) {
-            spaceBefore = override.before;
-            spaceAfter = override.after;
+            spaces = override;
         }
         s = s.trim();
-        if (this.prev && this.notBefore(this.prev, '=', '!', '>', '<', '?', '%')) {
-            s += Format.spacePlaceholderStr.repeat(spaceBefore);
+        if (this.prev && this.notBefore(this.prev, '=', '!', '>', '<', '?', '%', '&', '|', '/')) {
+            s += Format.spacePlaceholderStr.repeat(spaces.before);
         }
         s = s.trim();
         s += char;
         s = s.trim();
-        if (this.next && this.notAfter(this.next, '=', '>', '<', '?', '%')) {
+        if (this.next && this.notAfter(this.next, '=', '>', '<', '?', '%', '&', '|', '/')) {
             if (char != '?' || this.source.substr(this.offset, 4) != '?php') {
-                s += Format.spacePlaceholderStr.repeat(spaceAfter);
+                s += Format.spacePlaceholderStr.repeat(spaces.after);
             }
         }
         return s.trim();
@@ -369,8 +401,17 @@ export class Format {
     protected static indent(amount: number) {
         amount = amount < 0 ? 0 : amount;
         return Format.spacePlaceholderStr.repeat(amount * 4);
-        // var s = '';
-        // for (var j = 0; j < depth; j++) s += ' ';
-        // return s;
+    }
+}
+
+export enum CommentType { SingleLine, MultiLine }
+
+export class Spaces {
+    public before: number = 0;
+    public after: number = 0;
+
+    public constructor(before: number = 0, after: number = 0) {
+        this.before = before;
+        this.after = after;
     }
 }

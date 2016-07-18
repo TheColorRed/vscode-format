@@ -3,7 +3,7 @@
     "displayName": "Visual Studio Code Format",
     "description": "Format files",
     "icon": "images/icon.png",
-    "version": "0.0.2",
+    "version": "0.0.4",
     "publisher": "ryannaddy",
     "engines": {
         "vscode": "^0.10.1"
@@ -19,6 +19,9 @@
         "languages",
         "format"
     ],
+    "bugs": {
+        "url": "https://github.com/TheColorRed/vscode-format/issues"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/TheColorRed/vscode-format"
@@ -27,17 +30,32 @@
     "contributes": {
         "configuration": {
             "properties": {
+                "format.workspaceDisabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Wether or not to disable formatting on the entire workspace."
+                },
+                "format.disabled": {
+                    "type": "array",
+                    "default": [
+                        "html",
+                        "markdown",
+                        "plaintext",
+                        "diff",
+                        "jade",
+                        "xml",
+                        "blade",
+                        "handlebars",
+                        "tpl"
+                    ],
+                    "description": "A list of of languages that the formatter is disabled on."
+                },
                 "format.newLine": {
                     "type": "object",
                     "default": {
                         "brace": false
                     },
                     "description": "Whether or not to put items on a new line or the same line."
-                },
-                "format.disabled": {
-                    "type": "array",
-                    "default": ["html"],
-                    "description": "A list of of languages that the formatter is disabled."
                 },
                 "format.onType": {
                     "type": "boolean",
@@ -78,6 +96,14 @@
                                 }
                             }
                         },
+                        "and": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "or": {
+                            "before": 1,
+                            "after": 1
+                        },
                         "equal": {
                             "before": 1,
                             "after": 1
@@ -107,6 +133,34 @@
                             "after": 1
                         },
                         "semicolon": {
+                            "before": 0,
+                            "after": 1
+                        },
+                        "increment": {
+                            "before": 0,
+                            "after": 0
+                        },
+                        "decrement": {
+                            "before": 0,
+                            "after": 0
+                        },
+                        "add": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "subtract": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "multiply": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "divide": {
+                            "before": 1,
+                            "after": 1
+                        },
+                        "modulo": {
                             "before": 1,
                             "after": 1
                         },
