@@ -284,8 +284,8 @@ export class Format {
                 break;
             case '-':
                 if (this.next == '-' || this.prev == '-' || this.next.match(/\d/)) {
-                    spaces.before = config.get<number>('space.increment.before', 0);
-                    spaces.after = config.get<number>('space.increment.after', 0);
+                    spaces.before = config.get<number>('space.decrement.before', 0);
+                    spaces.after = config.get<number>('space.decrement.after', 0);
                 } else {
                     spaces.before = config.get<number>('space.subtract.before', 1);
                     spaces.after = config.get<number>('space.subtract.after', 1);
@@ -293,8 +293,8 @@ export class Format {
                 break;
             case '+':
                 if (this.next == '+' || this.prev == '+') {
-                    spaces.before = config.get<number>('space.decrement.before', 0);
-                    spaces.after = config.get<number>('space.decrement.after', 0);
+                    spaces.before = config.get<number>('space.increment.before', 0);
+                    spaces.after = config.get<number>('space.increment.after', 0);
                 } else {
                     spaces.before = config.get<number>('space.add.before', 1);
                     spaces.after = config.get<number>('space.add.after', 1);

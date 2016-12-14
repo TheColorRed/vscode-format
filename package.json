@@ -3,7 +3,7 @@
     "displayName": "Visual Studio Code Format",
     "description": "Format files",
     "icon": "images/icon.png",
-    "version": "0.0.4",
+    "version": "0.0.6",
     "publisher": "ryannaddy",
     "engines": {
         "vscode": "^0.10.1"
@@ -30,6 +30,7 @@
     "main": "./out/src/extension",
     "contributes": {
         "configuration": {
+            "title": "Visual Studio Code Format",
             "properties": {
                 "format.workspaceDisabled": {
                     "type": "boolean",

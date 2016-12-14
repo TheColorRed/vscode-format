@@ -88,3 +88,10 @@ Here is the current list of disabled languages:
 ```
 
 If you would like to disable formatting in the entire workspace, set `workspaceDisabled` to `true`.
+
+
+# Change Log
+
+* 0.0.6
+    * Added a change log
+    * Added a title to the package.json so the collapsable settings are easy to find.
